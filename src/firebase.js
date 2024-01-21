@@ -1,14 +1,14 @@
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
+import "dotenv/config";
+
 const firebaseConfig = {
-  apiKey: "AIzaSyCgREez7oIzBjY9MtUQRIPaj5rmrj_XMfs",
-  authDomain: "next-chat-bot-app.firebaseapp.com",
-  projectId: "next-chat-bot-app",
-  storageBucket: "next-chat-bot-app.appspot.com",
-  messagingSenderId: "8252399902",
-  appId: "1:8252399902:web:7e11faac41faa739d1e90f",
-  measurementId: "G-C7C2K72P5Q",
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID,
 };
 
 export const app = initializeApp(firebaseConfig);
-// const analytics = getAnalytics(app);

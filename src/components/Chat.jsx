@@ -1,17 +1,31 @@
 import React from "react";
-import { Avatar, HStack, Text } from "@chakra-ui/react";
+import { Text, HStack } from "@chakra-ui/react";
 
-const Chat = ({ message, uri, user }) => {
+const Chat = ({ mode, message, user = "bot" }) => {
+  const getBackgroundColor = () => {
+    if (mode === "dark") {
+      return user === "bot" ? "skyblue" : "pink";
+    } else {
+      return user === "bot" ? "lightgray" : "skyblue";
+    }
+  };
+
   return (
     <HStack
-      padding={"2"}
-      bg={"purple.100"}
-      borderRadius={"5"}
-      alignSelf={user !== "admin" ? "flex-end" : "flex-start"}
+      spacing={2}
+      p={2}
+      bg={getBackgroundColor()}
+      w={"auto"}
+      borderRadius={"base"}
+      alignSelf={user === "bot" ? "flex-start" : "flex-end"}
     >
-      {user === "admin" && <Avatar src={uri} size={"sm"} />}
-      <Text>{message}</Text>
-      {user !== "admin" && <Avatar src={uri} size={"sm"} />}
+      <Text
+        fontSize="14px"
+        fontWeight={"600"}
+        color={mode === "dark" ? "#2c3e50" : "black"}
+      >
+        {message}
+      </Text>
     </HStack>
   );
 };

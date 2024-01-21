@@ -1,98 +1,112 @@
 import React, { useEffect, useState } from "react";
-import { app } from "./firebase";
-import Chat from "./components/Chat";
-import {
-  VStack,
-  HStack,
-  Box,
-  Container,
-  Button,
-  Input,
-} from "@chakra-ui/react";
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut,
-  onAuthStateChanged,
-} from "firebase/auth";
-import {
-  getFirestore,
-  addDoc,
-  collection,
-  serverTimestamp,
-} from "firebase/firestore";
+import "./app.css";
+import { Button } from "@chakra-ui/react";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import animationData from "./assets/loading.json";
+import Lottie from "lottie-react";
+import { MdClose } from "react-icons/md";
+import Chatbot from "./components/Chatbot";
+import bot from "./assets/bot.png";
 
-const auth = getAuth(app);
-const db = getFirestore(app);
+const App = () => {
+  const [loading, setLoading] = useState(true);
+  const [countdown, setCountdown] = useState(5);
+  const [buttonClicked, setButtonClicked] = useState(false);
+  const [chatbotOpen, setChatbotOpen] = useState(false);
 
-const loginHandler = () => {
-  const google_provider = new GoogleAuthProvider();
-  signInWithPopup(auth, google_provider);
-};
-
-const logoutHander = () => signOut(auth);
-
-function App() {
-  const [user, setUser] = useState(false);
-  const [chatMessage, setChatMessage] = useState("");
-  const submitHander = async (event) => {
-    event.preventDefault();
-    try {
-      await addDoc(collection(db, "Chats"), {
-        text: chatMessage,
-        uid: user.uid,
-        uri: user.photoURL,
-        createdAt: serverTimestamp(),
-      });
-    } catch (error) {
-      console.log(error);
-    }
+  const handleButtonClick = () => {
+    setButtonClicked(true);
+    showToast();
   };
-  useEffect(() => {
-    const removedState = onAuthStateChanged(auth, (data) => {
-      setUser(data);
+
+  const showToast = () => {
+    toast.info("Didn't see chatbot, its on the right bottom! 🤖👇👉", {
+      position: "top-center",
+      autoClose: 2500,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
     });
-    return () => {
-      removedState();
-    };
+  };
+
+  const chatbotClicked = () => {
+    setChatbotOpen((prevChatbotOpen) => !prevChatbotOpen);
+  };
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prevCountdown) => prevCountdown - 1);
+    }, 1000);
+
+    setTimeout(() => {
+      setLoading(false);
+      clearInterval(timer);
+    }, 5000);
+
+    return () => clearInterval(timer);
   }, []);
+
   return (
-    <Box bg={"black"}>
-      {user ? (
-        <Container bg={"whitesmoke"} h={"100vh"}>
-          <VStack h={"full"} paddingY={"4"}>
-            <Button w={"full"} colorScheme={"blue"} onClick={logoutHander}>
-              Logout
-            </Button>
-            <VStack h={"full"} w={"full"} overflowY={"auto"}>
-              <Chat user={"admin"} message="Hi" />
-            </VStack>
-            <form onSubmit={submitHander} style={{ width: "100%" }}>
-              <HStack>
-                <Input
-                  onChange={(event) => {
-                    setChatMessage(event.target.value);
-                  }}
-                  value={chatMessage}
-                  placeholder="Type your message here.."
-                />
-                <Button type="submit" colorScheme={"red"}>
-                  Send
-                </Button>
-              </HStack>
-            </form>
-          </VStack>
-        </Container>
+    <div className={`container ${loading ? "loading" : "loaded"}`}>
+      {loading ? (
+        <div className="loading-content">
+          <div style={{ width: "160px", height: "160px" }}>
+            <Lottie animationData={animationData} />
+          </div>
+          <p style={{ fontSize: "1.25em", color: "whitesmoke" }}>
+            Taking you to the next-gen, Nexty in{" "}
+            <span style={{ color: "hotpink", fontWeight: "600" }}>
+              {countdown}s
+            </span>
+          </p>
+        </div>
       ) : (
-        <VStack justifyContent={"center"} alignItems={"center"} h={"100vh"}>
-          <Button colorScheme="red" onClick={loginHandler}>
-            Sign-in with Google
+        <div
+          className={`loaded-content ${chatbotOpen ? "leftshifted cross" : ""}`}
+        >
+          <p className="heading">
+            <span className="animation-text">Welcome to</span>{" "}
+            <span style={{ color: "whitesmoke", fontSize: "1.5em" }}>Next</span>
+            <span
+              style={{
+                color: "skyblue",
+                fontSize: "1.5em",
+                fontWeight: "bold",
+              }}
+            >
+              UI
+            </span>{" "}
+            <span className="animation-text">Chatbot</span>
+          </p>
+          <Button
+            colorScheme="blue"
+            variant="outline"
+            borderWidth="1.5px"
+            onClick={handleButtonClick}
+          >
+            {buttonClicked ? "Have a chat" : "Get Started"}
           </Button>
-        </VStack>
+          {buttonClicked && (
+            <div
+              className={`chatbot-icon ${chatbotOpen ? "cross" : ""}`}
+              id="chatbotIcon"
+              onClick={chatbotClicked}
+            >
+              {chatbotOpen ? (
+                <MdClose size={24} color="white" />
+              ) : (
+                <img src={bot} alt="Chatbot" />
+              )}
+            </div>
+          )}
+        </div>
       )}
-    </Box>
+      {chatbotOpen && <Chatbot />}
+      <ToastContainer />
+    </div>
   );
-}
+};
 
 export default App;
