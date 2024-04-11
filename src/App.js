@@ -8,14 +8,21 @@ import Lottie from "lottie-react";
 import { MdClose } from "react-icons/md";
 import Chatbot from "./components/Chatbot";
 import bot from "./assets/bot.png";
+import botpop from "./assets/botpop.wav";
 
 const App = () => {
   const [loading, setLoading] = useState(true);
   const [countdown, setCountdown] = useState(5);
   const [buttonClicked, setButtonClicked] = useState(false);
   const [chatbotOpen, setChatbotOpen] = useState(false);
+  const [startSoundPlayed, setStartSoundPlayed] = useState(false);
 
   const handleButtonClick = () => {
+    if (!startSoundPlayed) {
+      const startAudio = new Audio(botpop);
+      startAudio.play();
+      setStartSoundPlayed(true);
+    }
     setButtonClicked(true);
     showToast();
   };
@@ -90,7 +97,7 @@ const App = () => {
           </Button>
           {buttonClicked && (
             <div
-              className={`chatbot-icon ${chatbotOpen ? "cross" : ""}`}
+              className={`chatbot-icon ${chatbotOpen ? "chatbot-opened" : ""}`}
               id="chatbotIcon"
               onClick={chatbotClicked}
             >

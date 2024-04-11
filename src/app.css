@@ -49,7 +49,8 @@
   font-size: 24px;
   cursor: pointer;
   box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.2);
-  transition: background-color 0.3s ease, transform 0.3s ease;
+  transition: background-color 0.3s ease, transform 0.3s ease-in-out;
+  animation: pulse-animation 1.5s infinite;
   border: 2px solid #fff;
   z-index: 10001;
   overflow: hidden;
@@ -71,8 +72,28 @@
   transform: scale(1.1);
 }
 
+.chatbot-icon.chatbot-opened {
+  animation: none;
+}
+
+/* .cross {
+  transform: rotate(45deg);
+} */
+
 .chatbot-icon:hover::before {
   opacity: 1;
+}
+
+@keyframes pulse-animation {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
 }
 
 @keyframes pulse {

@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { BsMoon, BsSun } from "react-icons/bs";
 import { AiOutlineSend } from "react-icons/ai";
+import { FaTrash } from "react-icons/fa";
 import { motion } from "framer-motion";
 import bot from "../assets/bot.png";
 import Status from "./Status";
@@ -30,8 +31,15 @@ import {
   onSnapshot,
   query,
   orderBy,
+  getDocs,
+  writeBatch,
 } from "firebase/firestore";
-// import { sendMessageToOpenAI } from "../openai";
+import { sendMessageToOpenAI } from "../openai";
+import offline from "../assets/offline.wav";
+import online from "../assets/online.wav";
+import deleteSound from "../assets/deleteSound.wav";
+import messageSound from "../assets/messageSound.mp3";
+
 const customTheme = extendTheme({
   colors: {
     light: {
@@ -42,6 +50,7 @@ const customTheme = extendTheme({
       inputBg: "lightgray",
       sendButtonBg: "green.400",
       sendButtonColor: "black",
+      deleteButtonColor: "black",
     },
     dark: {
       primary: "#2980b9",
@@ -51,58 +60,94 @@ const customTheme = extendTheme({
       inputBg: "#2c3e50",
       sendButtonBg: "green.600",
       sendButtonColor: "white",
+      deleteButtonColor: "lightpink",
     },
   },
 });
 
 const MotionBox = motion(Box);
-const db = getFirestore(app);
 
 const Chatbot = () => {
-  const firebase_query = query(
-    collection(db, "Messages"),
-    orderBy("createdAt", "asc")
-  );
+  const db = getFirestore(app);
+  const messagesCollection = collection(db, "Messages");
+  const querySnapshot = query(messagesCollection, orderBy("createdAt", "asc"));
   const divRef = useRef(null);
   const { colorMode, toggleColorMode } = useColorMode();
-  const isOnline = false;
+  const [isOnline, setisOnline] = useState(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
+  const [isTyping, setIsTyping] = useState(false);
 
   const submitHandler = async (e) => {
     e.preventDefault();
     try {
-      // const res = await sendMessageToOpenAI(message);
+      setIsTyping(true);
+
+      if (!isOnline && message.toLowerCase() !== "bye") {
+        const onlineSound = new Audio(online);
+        await onlineSound.play();
+        setisOnline(true);
+      }
       setMessage("");
-      await addDoc(collection(db, "Messages"), {
+
+      await addDoc(messagesCollection, {
         msg: message,
         createdAt: serverTimestamp(),
         isBot: false,
       });
-      // await addDoc(collection(db, "Messages"), {
-      //   msg: res.message,
-      //   createdAt: serverTimestamp(),
-      //   isBot: true,
-      // });
-      divRef.current.scrollIntoView({ behavior: "smooth" });
+      const res = await sendMessageToOpenAI(message);
+
+      await addDoc(messagesCollection, {
+        msg: res.message["content"],
+        createdAt: serverTimestamp(),
+        isBot: true,
+      });
+
+      setIsTyping(false);
+      if (message.toLowerCase() !== "bye") {
+        const messageSoundBot = new Audio(messageSound);
+        await messageSoundBot.play();
+      }
+
+      if (message.toLowerCase() === "bye") {
+        const offlineSound = new Audio(offline);
+        await offlineSound.play();
+        setisOnline(false);
+      }
     } catch (error) {
       alert(error);
     }
   };
 
-  useEffect(() => {
-    const removedState = onSnapshot(firebase_query, (snap) => {
-      setMessages(
-        snap.docs.map((item) => {
-          const id = item.id;
-          return { id, ...item.data() };
-        })
-      );
+  const deleteButtonHandler = async () => {
+    const messagesRef = collection(db, "Messages");
+    const querySnapshot = await getDocs(messagesRef);
+    const batch = writeBatch(db);
+    querySnapshot.forEach((doc) => {
+      const docRef = doc.ref;
+      batch.delete(docRef);
     });
 
-    return () => {
-      removedState();
-    };
+    const deleteSnd = new Audio(deleteSound);
+    deleteSnd.play();
+    await batch.commit();
+  };
+
+  useEffect(() => {
+    try {
+      const unsubscribe = onSnapshot(querySnapshot, (snapshot) => {
+        const newMessages = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setMessages(newMessages);
+        divRef.current.scrollIntoView({ behavior: "smooth" });
+      });
+
+      return () => unsubscribe();
+    } catch (error) {
+      alert(error);
+    }
   }, []);
 
   return (
@@ -170,9 +215,9 @@ const Chatbot = () => {
           </HStack>
           <VStack
             mt={4}
-            borderRadius="md"
+            borderRadius={"md"}
             height={"300px"}
-            overflowY="auto"
+            overflowY={"auto"}
             css={{
               "&::-webkit-scrollbar": {
                 display: "none",
@@ -187,10 +232,15 @@ const Chatbot = () => {
                 user={message.isBot ? "bot" : "user"}
               />
             ))}
+            {isTyping && (
+              <Text fontSize={"14px"} alignSelf={"flex-start"}>
+                Nexty is typing...
+              </Text>
+            )}
             <div ref={divRef}></div>
           </VStack>{" "}
-          <form onSubmit={submitHandler}>
-            <Box mt={4}>
+          <HStack mt={4} spacing={2}>
+            <form onSubmit={submitHandler}>
               <InputGroup>
                 <Input
                   placeholder="Talk to Nexty..."
@@ -199,6 +249,10 @@ const Chatbot = () => {
                   fontSize="14px"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
+                  _placeholder={{
+                    color: "gray.500",
+                  }}
+                  w={"242px"}
                 />
                 <InputRightElement>
                   <motion.button
@@ -210,9 +264,7 @@ const Chatbot = () => {
                     outline="none"
                     cursor="pointer"
                     aria-label="Send Message"
-                    _placeholder={{
-                      color: colorMode === "light" ? "gray.500" : "gray.200",
-                    }}
+                    j
                   >
                     <AiOutlineSend
                       color={customTheme.colors[colorMode].sendButtonColor}
@@ -220,8 +272,22 @@ const Chatbot = () => {
                   </motion.button>
                 </InputRightElement>
               </InputGroup>
-            </Box>
-          </form>
+            </form>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={deleteButtonHandler}
+              backgroundColor={customTheme.colors[colorMode].sendButtonBg}
+              borderRadius={5}
+              p={2}
+              outline="none"
+              cursor="pointer"
+              aria-label="Delete All Messages"
+            >
+              <FaTrash
+                color={customTheme.colors[colorMode].deleteButtonColor}
+              />
+            </motion.button>
+          </HStack>
         </MotionBox>
       </ColorModeProvider>
     </ChakraProvider>
